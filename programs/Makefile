@@ -23,6 +23,7 @@ SUBDIRS =			\
 	fill_verify_holes	\
 	fsck-tests		\
 	fsx			\
+	iocache			\
 	iozone			\
 	kernel_build_parallel_find			\
 	lock_grab		\
