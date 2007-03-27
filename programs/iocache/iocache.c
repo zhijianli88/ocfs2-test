@@ -11,14 +11,20 @@
  * 4) Read again, expecting the cache to return them.  Compare.
  * 5) Write a pattern to the blocks.
  * 6) Read them again, expecting the pattern.
- * 7) Start a child process.
+ * 7) Start a child process.  It drops and recreates its cache.
  * 8)           The child reads the blocks, expecting the pattern.
  * 9)           The child writes a new pattern to the blocks.
  * 10) The parent reads the blocks again.  Because it has a cache, it
  *     should still see the old pattern.
  * 11) Drop and recreate the cache.  Read the blocks again.  It should see
  *     the new pattern.
- * 12) Write the original blocks back.
+ * 12) To test multiblock read and write, write an alternating pattern to
+ *     blknos[0].
+ * 13) Read the blocks via a multiblock read.  It should see the
+ *     alternating pattern.
+ * 14) Drop and recreate the cache.  Read the blocks via a multiblock read.
+ *     It should see the alternating pattern.
+ * 15) Write the original blocks back.
  */
 
 
@@ -71,6 +77,7 @@
 #define BLOCKSIZE 4096
 #define PATTERN0 'a'
 #define PATTERN1 'b'
+#define POISON 'p'
 
 char *progname;
 static int number_of_blocks = NUM_BLOCKS;
@@ -110,6 +117,7 @@ static int initialize(int argc, char *argv[])
 	int rc, i;
 	errcode_t ret = 0;
 	progname = argv[0];
+	char *original_buffer, *pattern_buffer, *working_buffer;
 
 	if (argc != 2)
 		usage(-EINVAL);
@@ -124,17 +132,27 @@ static int initialize(int argc, char *argv[])
 	if (rc)
 		goto out;
 
+	ret = ocfs2_malloc_blocks(channel, number_of_blocks,
+				  &original_buffer);
+	if (ret)
+		goto out;
+	ret = ocfs2_malloc_blocks(channel, number_of_blocks,
+				  &pattern_buffer);
+	if (ret)
+		goto out;
+	ret = ocfs2_malloc_blocks(channel, number_of_blocks,
+				  &working_buffer);
+	if (ret)
+		goto out;
 	/* open_device() set our blocksize */
 	for (i = 0; i < number_of_blocks; i++) {
-		ret = ocfs2_malloc_block(channel, &original_blocks[i]);
-		if (ret)
-			goto out;
-		ret = ocfs2_malloc_block(channel, &pattern_blocks[i]);
-		if (ret)
-			goto out;
-		ret = ocfs2_malloc_block(channel, &working_blocks[i]);
-		if (ret)
-			goto out;
+		original_blocks[i] = original_buffer;
+		pattern_blocks[i] = pattern_buffer;
+		working_blocks[i] = working_buffer;
+
+		original_buffer += io_get_blksize(channel);
+		pattern_buffer += io_get_blksize(channel);
+		working_buffer += io_get_blksize(channel);
 	}
 
 	/*
@@ -157,12 +175,23 @@ out:
 	return rc;
 }
 
-static void fill_pattern(int pat)
+static void fill_pattern(int even_pat, int odd_pat)
+{
+	int i, pat;
+
+	for (i = 0; i < number_of_blocks; i++) {
+		pat = (i % 2) ? even_pat : odd_pat;
+		memset(pattern_blocks[i], pat, io_get_blksize(channel));
+	}
+}
+
+/* Because we're comparing, we want to avoid seeing stale data. */
+static void poison_working_blocks(void)
 {
 	int i;
 
 	for (i = 0; i < number_of_blocks; i++)
-		memset(pattern_blocks[i], pat, io_get_blksize(channel));
+		memset(working_blocks[i], POISON, io_get_blksize(channel));
 }
 
 
@@ -203,6 +232,7 @@ static int step3(void)
 	int i, failed = 0;
 	errcode_t ret;
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -231,6 +261,7 @@ static int step4(void)
 	int i, failed = 0;
 	errcode_t ret;
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -259,7 +290,7 @@ static int step5(void)
 	int i, failed = 0;
 	errcode_t ret;
 
-	fill_pattern(PATTERN0);
+	fill_pattern(PATTERN0, PATTERN0);
 
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_write_block(channel, blknos[i], 1,
@@ -280,6 +311,7 @@ static int step6(void)
 	int i, failed = 0;
 	errcode_t ret;
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -353,6 +385,7 @@ static int step8(void)
 	int i, failed = 0;
 	errcode_t ret;
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -381,7 +414,7 @@ static int step9(void)
 	int i, failed = 0;
 	errcode_t ret;
 
-	fill_pattern(PATTERN1);
+	fill_pattern(PATTERN1, PATTERN1);
 
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_write_block(channel, blknos[i], 1,
@@ -402,6 +435,7 @@ static int step10(void)
 	int i, failed = 0;
 	errcode_t ret;
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -433,6 +467,7 @@ static int step11(void)
 	io_destroy_cache(channel);
 	io_init_cache(channel, 10);
 
+	poison_working_blocks();
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_read_block(channel, blknos[i], 1, 
 				    working_blocks[i]);
@@ -455,7 +490,7 @@ static int step11(void)
 	}
 
 	/* Bring the parent's pattern to PATTERN1 */
-	fill_pattern(PATTERN1);
+	fill_pattern(PATTERN1, PATTERN1);
 
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		if (memcmp(pattern_blocks[i], working_blocks[i],
@@ -471,6 +506,84 @@ static int step11(void)
 }
 
 static int step12(void)
+{
+	int failed = 0;
+	errcode_t ret;
+
+	fill_pattern(PATTERN0, PATTERN1);
+
+	ret = io_write_block(channel, blknos[0], number_of_blocks,
+			     pattern_blocks[0]);
+	if (ret) {
+		failed = 1;
+		com_err(progname, ret,
+			"while writing alternating pattern to block %"PRIu64,
+			blknos[0]);
+	}
+
+	return failed;
+}
+
+static int step13(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	poison_working_blocks();
+	ret = io_read_block(channel, blknos[0], number_of_blocks, 
+			    working_blocks[0]);
+	if (ret) {
+		failed = 1;
+		com_err(progname, ret,
+			"while doing multiblock read of block %"PRIu64,
+			blknos[0]);
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Cached re-read of block %"PRIu64" doesn't match alternating pattern\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step14(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	io_destroy_cache(channel);
+	io_init_cache(channel, number_of_blocks);
+
+	poison_working_blocks();
+	ret = io_read_block(channel, blknos[0], number_of_blocks, 
+			    working_blocks[0]);
+	if (ret) {
+		failed = 1;
+		com_err(progname, ret,
+			"while doing multiblock read of block %"PRIu64,
+			blknos[0]);
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Cached re-read of block %"PRIu64" doesn't match alternating pattern\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step15(void)
 {
 	int i, failed = 0;
 	errcode_t ret;
@@ -494,13 +607,10 @@ static int step12(void)
 
 static void finalize(void)
 {
-	int i;
-
-	for (i = 0; i < number_of_blocks; i++) {
-		ocfs2_free(&original_blocks[i]);
-		ocfs2_free(&pattern_blocks[i]);
-		ocfs2_free(&working_blocks[i]);
-	}
+	/* The blocks are actually allocated in one chunk */
+	ocfs2_free(&original_blocks[0]);
+	ocfs2_free(&pattern_blocks[0]);
+	ocfs2_free(&working_blocks[0]);
 
 	io_close(channel);
 }
@@ -520,9 +630,9 @@ int main(int argc, char *argv[])
 	try_and_fail(failed, step2, out);
 	try_and_fail(failed, step3, out);
 	try_and_continue(failed, step4);
-	try_and_fail(failed, step5, out);
+	try_and_fail(failed, step5, out_writeback);
 	try_and_continue(failed, step6);
-	try_and_fail(failed, step7, out);
+	try_and_fail(failed, step7, out_writeback);
 
 	if (childp) {
 		try_and_fail(failed, step8, out);
@@ -530,9 +640,14 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	try_and_fail(failed, step10, out);
-	try_and_fail(failed, step11, out);
-	try_and_continue(failed, step12);
+	try_and_fail(failed, step10, out_writeback);
+	try_and_fail(failed, step11, out_writeback);
+	try_and_fail(failed, step12, out_writeback);
+	try_and_fail(failed, step13, out_writeback);
+	try_and_fail(failed, step14, out_writeback);
+
+out_writeback:
+	try_and_continue(failed, step15);
 
 out:
 	finalize();
