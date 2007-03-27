@@ -29,14 +29,46 @@
 #include <unistd.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <sys/wait.h>
 
 #include <ocfs2/ocfs2.h>
+
+#define TRACE 1
+#ifdef TRACE
+# define _called()      fprintf(stderr, "TRACE: %s called\n", __func__)
+# define _here()        fprintf(stderr, "TRACE: %s line %d\n", __func__, __LINE__)
+# define _done()        fprintf(stderr, "TRACE: %s done\n", __func__)
+#else
+# define _called()      do { } while (0)
+# define _here()        do { } while (0)
+# define _done()        do { } while (0)
+#endif
+
+#define try_and_fail(_failcount, _call, _label) do {			\
+		fprintf(stdout, "Testing %s ... ", #_call);		\
+		fflush(stdout);						\
+		if (_call()) {						\
+			(_failcount)++;					\
+			fprintf(stdout, "FAIL\n");			\
+			goto _label;					\
+		} else							\
+			fprintf(stdout, "PASS\n");			\
+	} while (0)
+#define try_and_continue(_failcount, _call) do {			\
+		fprintf(stdout, "Testing %s ... ", #_call);		\
+		fflush(stdout);						\
+		if (_call()) {						\
+			(_failcount)++;					\
+			fprintf(stdout, "FAIL\n");			\
+		} else							\
+			fprintf(stdout, "PASS\n");			\
+	} while (0)
 
 
 #define NUM_BLOCKS 10
 #define BLOCKSIZE 4096
-#define PATTERN1 "a"
-#define PATTERN2 "b"
+#define PATTERN0 'a'
+#define PATTERN1 'b'
 
 char *progname;
 static int number_of_blocks = NUM_BLOCKS;
@@ -46,6 +78,7 @@ static char *original_blocks[NUM_BLOCKS];
 static char *pattern_blocks[NUM_BLOCKS];
 static char *working_blocks[NUM_BLOCKS];
 static io_channel *channel;
+static int childp;
 
 
 static void usage(int rc)
@@ -173,6 +206,214 @@ static int step3(void)
 		if (memcmp(original_blocks[i], working_blocks[i],
 			   io_get_blksize(channel))) {
 			failed = 1;
+			fprintf(stderr,
+				"%s: Cache filling read of block %"PRIu64" doesn't match original\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step4(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_read_block(channel, blknos[i], 1, 
+				    working_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while reading cached block %"PRIu64, blknos[i]);
+		}
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(original_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Cached read of block %"PRIu64" doesn't match original\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step5(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; i < number_of_blocks; i++) {
+		memset(pattern_blocks[i], PATTERN0,
+		       io_get_blksize(channel));
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_write_block(channel, blknos[i], 1,
+				     pattern_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while writing pattern 0 to block %"PRIu64,
+				blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step6(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_read_block(channel, blknos[i], 1, 
+				    working_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while reading cached block %"PRIu64, blknos[i]);
+		}
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Cached read of block %"PRIu64" doesn't match pattern 0\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+
+static int step7(void)
+{
+	int tries = 5;
+	pid_t pid, wpid;
+	int status;
+	int failed = 0;
+
+	do {
+		pid = fork();
+		tries--;
+	} while (tries && (pid < 0));
+
+	if (pid < 0) {
+		fprintf(stderr, "%s: Unable to create child process: %s\n",
+			progname, strerror(errno));
+		return 1;
+	}
+
+	if (!pid) {
+		childp = 1;
+		
+		/* Erase the child's cache */
+		io_destroy_cache(channel);
+		io_init_cache(channel, 10);
+		return 0;
+	}
+
+	while (1) {
+		wpid = waitpid(pid, &status, 0);
+		if (wpid == pid)
+			break;
+		if (errno == EINTR)
+			continue;
+		fprintf(stderr, "%s: Unable to wait on child process: %s\n",
+			progname, strerror(errno));
+		failed = 1;
+	}
+
+	fprintf(stderr, "Parent  step7 ... ");
+	fflush(stdout);
+
+	return failed;
+}
+
+static int step8(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_read_block(channel, blknos[i], 1, 
+				    working_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while child reading block %"PRIu64, blknos[i]);
+		}
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Child's read of block %"PRIu64" doesn't match pattern 0\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step9(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; i < number_of_blocks; i++) {
+		memset(pattern_blocks[i], PATTERN1,
+		       io_get_blksize(channel));
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_write_block(channel, blknos[i], 1,
+				     pattern_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while child writing pattern 1 to block %"PRIu64,
+				blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step10(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_read_block(channel, blknos[i], 1, 
+				    working_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while re-reading cached block %"PRIu64, blknos[i]);
+		}
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Cached re-read of block %"PRIu64" doesn't match pattern 0\n",
+				progname, blknos[i]);
 		}
 	}
 
@@ -209,9 +450,9 @@ static void finalize(void)
 		ocfs2_free(&original_blocks[i]);
 		ocfs2_free(&pattern_blocks[i]);
 		ocfs2_free(&working_blocks[i]);
-
-		io_close(channel);
 	}
+
+	io_close(channel);
 }
 
 int main(int argc, char *argv[])
@@ -219,15 +460,34 @@ int main(int argc, char *argv[])
 	int failed = 0;
 	int rc;
 
+	initialize_ocfs_error_table();
+
 	rc = initialize(argc, argv);
+	if (rc)
+		goto out;
 
-	failed += step1();
-	failed += step2();
-	failed += step3();
+	try_and_fail(failed, step1, out);
+	try_and_fail(failed, step2, out);
+	try_and_fail(failed, step3, out);
+	try_and_continue(failed, step4);
+	try_and_fail(failed, step5, out);
+	try_and_continue(failed, step6);
+	try_and_fail(failed, step7, out);
 
-	failed += step11();
+	if (childp) {
+		try_and_fail(failed, step8, out);
+		try_and_fail(failed, step9, out);
+		goto out;
+	}
 
+	try_and_fail(failed, step10, out);
+	try_and_continue(failed, step11);
+
+out:
 	finalize();
+
+	if (!rc && failed)
+		rc = 1;
 
 	return rc;
 }
