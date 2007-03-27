@@ -16,7 +16,9 @@
  * 9)           The child writes a new pattern to the blocks.
  * 10) The parent reads the blocks again.  Because it has a cache, it
  *     should still see the old pattern.
- * 11) Write the original blocks back.
+ * 11) Drop and recreate the cache.  Read the blocks again.  It should see
+ *     the new pattern.
+ * 12) Write the original blocks back.
  */
 
 
@@ -155,6 +157,15 @@ out:
 	return rc;
 }
 
+static void fill_pattern(int pat)
+{
+	int i;
+
+	for (i = 0; i < number_of_blocks; i++)
+		memset(pattern_blocks[i], pat, io_get_blksize(channel));
+}
+
+
 static int step1(void)
 {
 	int i, failed = 0;
@@ -248,10 +259,7 @@ static int step5(void)
 	int i, failed = 0;
 	errcode_t ret;
 
-	for (i = 0; i < number_of_blocks; i++) {
-		memset(pattern_blocks[i], PATTERN0,
-		       io_get_blksize(channel));
-	}
+	fill_pattern(PATTERN0);
 
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_write_block(channel, blknos[i], 1,
@@ -373,10 +381,7 @@ static int step9(void)
 	int i, failed = 0;
 	errcode_t ret;
 
-	for (i = 0; i < number_of_blocks; i++) {
-		memset(pattern_blocks[i], PATTERN1,
-		       io_get_blksize(channel));
-	}
+	fill_pattern(PATTERN1);
 
 	for (i = 0; !failed && (i < number_of_blocks); i++) {
 		ret = io_write_block(channel, blknos[i], 1,
@@ -421,6 +426,51 @@ static int step10(void)
 }
 
 static int step11(void)
+{
+	int i, failed = 0;
+	errcode_t ret;
+
+	io_destroy_cache(channel);
+	io_init_cache(channel, 10);
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		ret = io_read_block(channel, blknos[i], 1, 
+				    working_blocks[i]);
+		if (ret) {
+			failed = 1;
+			com_err(progname, ret,
+				"while re-reading cached block %"PRIu64, blknos[i]);
+		}
+	}
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		/* Note, this memcmp is reversed from step 10 */
+		if (!memcmp(pattern_blocks[i], working_blocks[i],
+			    io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Re-read of block %"PRIu64" incorrectly matches pattern 0\n",
+				progname, blknos[i]);
+		}
+	}
+
+	/* Bring the parent's pattern to PATTERN1 */
+	fill_pattern(PATTERN1);
+
+	for (i = 0; !failed && (i < number_of_blocks); i++) {
+		if (memcmp(pattern_blocks[i], working_blocks[i],
+			   io_get_blksize(channel))) {
+			failed = 1;
+			fprintf(stderr,
+				"%s: Re-read of block %"PRIu64" doesn't match pattern 1\n",
+				progname, blknos[i]);
+		}
+	}
+
+	return failed;
+}
+
+static int step12(void)
 {
 	int i, failed = 0;
 	errcode_t ret;
@@ -481,7 +531,8 @@ int main(int argc, char *argv[])
 	}
 
 	try_and_fail(failed, step10, out);
-	try_and_continue(failed, step11);
+	try_and_fail(failed, step11, out);
+	try_and_continue(failed, step12);
 
 out:
 	finalize();
