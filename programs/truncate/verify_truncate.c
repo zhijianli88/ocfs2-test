@@ -262,7 +262,7 @@ int verify_truncate(char *file_name)
 
 		if (memcmp(buf, pattern, clustersize)) {
 			fprintf(stderr, "#%d cluster corrupted on %s.\n",
-				file_name);
+				i, file_name);
 			ret = -1;
 			goto out;
 		}
