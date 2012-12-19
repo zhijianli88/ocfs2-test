@@ -98,7 +98,7 @@ int parse_opts(int argc, char **argv)
 		}
 	}
 
-	if (!filename) {
+	if (!filename[0]) {
 		fprintf(stderr, "filename is a mandatory option\n");
 		usage();
 	}

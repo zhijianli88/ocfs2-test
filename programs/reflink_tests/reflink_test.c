@@ -2058,10 +2058,7 @@ static int destructive_test(void)
 					}
 				}
 
-				/*
-				 * Are you ready to crash the machine?
-				*/
-
+				/* Are you ready to crash the machine? */
 				if ((j > 1) && (j < chunk_no - 1)) {
 					if (get_rand(1, chunk_no) == chunk_no / 2) {
 
