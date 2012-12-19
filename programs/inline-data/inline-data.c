@@ -235,7 +235,7 @@ static int setup(int argc, char *argv[])
 	mkdir(work_place, FILE_MODE);
 
 	printf("BlockSize:\t\t%d\nMax Inline Data Size:\t%d\n"
-	       "ClusterSize:\t\t%d\nPageSize:\t\t%d\nWorkingPlace:\t\t%s\n\n",
+	       "ClusterSize:\t\t%lu\nPageSize:\t\t%lu\nWorkingPlace:\t\t%s\n\n",
 	       blocksize, max_inline_size, clustersize, page_size, work_place);
 
 	return 0;

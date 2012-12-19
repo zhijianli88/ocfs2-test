@@ -109,7 +109,6 @@ int extend_pattern(int fd, unsigned int old_size, unsigned int new_size)
 {
 	int bytes = new_size - old_size;
 	int ret;
-	int i;
 
 	memset(pattern + old_size, 0, bytes);
 
@@ -210,7 +209,7 @@ int write_at(int fd, const void *buf, size_t count, off_t offset)
 	}
 
 	if (ret != count) {
-		fprintf(stderr, "Short write: wanted %d, got %d\n", count, ret);
+		fprintf(stderr, "Short write: wanted %zu, got %d\n", count, ret);
 		return -1;
 	}
 
@@ -325,8 +324,9 @@ int verify_pattern_mmap(int fd, unsigned int size)
 
 int uuid2dev(const char *uuid, char *dev)
 {
-	FILE *df;
 	char cmd[300];
+	FILE *df;
+	int ret;
 
 	snprintf(cmd, 300, "/sbin/blkid |grep %s|cut -d':' -f1", uuid);
 
@@ -337,9 +337,11 @@ int uuid2dev(const char *uuid, char *dev)
 		return -1;
 	}
 
-	fscanf(df, "%s\n", dev);
-
+	ret = fscanf(df, "%s\n", dev);
 	pclose(df);
+
+	if (ret != 1)
+		return -1;
 
 	return 0;
 }
@@ -432,7 +434,7 @@ int should_inlined_or_not(int is_inlined, int should_inlined, int test_no)
 		if (!is_inlined) {
 			fprintf(stderr, "After Test #%d, file %s should be "
 				"inlined here!\n", test_no, file_name);
-			fprintf(stderr, "File(%s): i_size = %d,id_count = %d\n",
+			fprintf(stderr, "File(%s): i_size = %lu, id_count = %d\n",
 				file_name, i_size, id_count);
 			return -1;
 		}
@@ -441,7 +443,7 @@ int should_inlined_or_not(int is_inlined, int should_inlined, int test_no)
 		if (is_inlined) {
 			fprintf(stderr, "After Test #%d, file %s should be "
 				"extented here!\n", test_no, file_name);
-			fprintf(stderr, "File(%s): i_size = %d,id_count = %d\n",
+			fprintf(stderr, "File(%s): i_size = %lu, id_count = %d\n",
 				file_name, i_size, id_count);
 			return -1;
 
