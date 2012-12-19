@@ -902,7 +902,6 @@ static int test_regular_file(int test_no)
 		test_num++;
 	}
 
-bail:
 	printf("All File I/O Tests Passed\n");
 	unlink(file_name);
 
