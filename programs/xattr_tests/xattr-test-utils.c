@@ -107,7 +107,7 @@ void xattr_name_generator(unsigned long xattr_no,
 	}
 
 	xattr_name[xattr_name_rsz - 6] = 0;
-	snprintf(postfix, 7, "%lu", xattr_no);
+	snprintf(postfix, 7, "%06d", xattr_no);
 	strcat(xattr_name, postfix);
 	strcpy(xattr_name_list_set[xattr_no], xattr_name);
 }
@@ -365,7 +365,7 @@ void xattr_value_constructor(int xattr_entry_no)
 	strlen(value_postfix_magic) -
 	strlen(xattr_name) - 5);
 
-	snprintf(value_sz, 6, "%zu", strlen(value_prefix_magic) +
+	snprintf(value_sz, 6, "%05d", strlen(value_prefix_magic) +
 		 strlen(xattr_name) + strlen(xattr_value) + 5 +
 		 strlen(value_postfix_magic));
 
