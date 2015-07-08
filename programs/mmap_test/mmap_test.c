@@ -80,6 +80,14 @@ int main(int argc, char *argv[])
     }
 
     offset = stat_buf.st_size % page_size;
+
+    /* fix offset if the file size is multiple of page size */
+    if (offset == 0)
+	    offset = page_size;
+
+    if (offset > stat_buf.st_size)
+	    offset = stat_buf.st_size;
+
     ptr = buf + (stat_buf.st_size - offset);
     remain = page_size - offset;
 
