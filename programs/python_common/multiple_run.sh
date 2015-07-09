@@ -450,12 +450,16 @@ run_flock_unit_test()
 	local workplace=${MOUNT_POINT}/flock_unit_test
 	local testfile1=${workplace}/flock_unit_test_file1
 	local testfile2=${workplace}/flock_unit_test_file2
+	local posix_lock_supported=0
 
 	run_common_testcase "flock_unit" "sparse,unwritten,inline-data" \
 "${TOUCH_BIN} ${testfile1} && ${TOUCH_BIN} ${testfile2} && ${BINDIR}/run_flock_unit_test.py \
--l ${fcntl_logfile} -n ${NODE_LIST} -t fcntl -e ${testfile1} -f ${testfile2} \
-&& ${BINDIR}/run_flock_unit_test.py -l ${flock_logfile} -i ${INTERFACE} -n ${NODE_LIST} -t \
-flock -e ${testfile1} -f ${testfile2}"
+-l ${flock_logfile} -i ${INTERFACE} -n ${NODE_LIST} -t flock -e ${testfile1} -f ${testfile2}"
+
+	if [ $posix_lock_supported -eq 1 ]; then
+		${BINDIR}/run_flock_unit_test.py -l ${fcntl_logfile} -n ${NODE_LIST} -t fcntl \
+		-e ${testfile1} -f ${testfile2}
+	fi
 }
 
 f_cleanup()
