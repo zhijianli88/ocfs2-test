@@ -16,6 +16,6 @@ BIN_PROGRAMS = test_truncate
 BIN_EXTRA = ocfs2_truncate.sh
 
 test_truncate: $(OBJECTS)
-	$(LINK)  -locfs2 -lcom_err
+	$(LINK)  -locfs2 -laio -lcom_err
 
 include $(TOPDIR)/Postamble.make

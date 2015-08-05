@@ -16,6 +16,6 @@ BIN_PROGRAMS = remove_slot
 BIN_EXTRA = remove_slot.sh corrupt_remove_slot.sh
 
 remove_slot: $(OBJECTS)
-	$(LINK)  -locfs2 -lcom_err
+	$(LINK)  -locfs2 -laio -lcom_err
 
 include $(TOPDIR)/Postamble.make

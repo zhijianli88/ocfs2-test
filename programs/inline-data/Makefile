@@ -18,10 +18,10 @@ BIN_PROGRAMS = inline-data inline-dirs multi-inline-data multi-inline-dirs
 BIN_EXTRA =  single-inline-run.sh multi-inline-run.sh
 
 inline-data: inline-data.o inline-data-utils.o
-	$(LINK) -locfs2
+	$(LINK) -locfs2 -laio
 
 inline-dirs: inline-dirs.o inline-dirs-utils.o
-	$(LINK) -locfs2
+	$(LINK) -locfs2 -laio
 
 multi-inline-data.o: multi-inline-data.c
 	$(MPICC) -c multi-inline-data.c
@@ -30,9 +30,9 @@ multi-inline-dirs.o: multi-inline-dirs.c
 	$(MPICC) -c multi-inline-dirs.c
 
 multi-inline-data: multi-inline-data.o inline-data-utils.o
-	$(MPI_LINK) -locfs2
+	$(MPI_LINK) -locfs2 -laio
 
 multi-inline-dirs: multi-inline-dirs.o
-	$(MPI_LINK) -locfs2
+	$(MPI_LINK) -locfs2 -laio
 
 include $(TOPDIR)/Postamble.make
