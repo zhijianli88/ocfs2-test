@@ -42,12 +42,24 @@ else
 	INSTALLDIR=${2};
 fi;
 
+MPI_ROOT_OPT=
+if [ -f /etc/redhat-release ]; then
+	case "`rpm -qf /etc/redhat-release --qf '%{VERSION}' 2>/dev/null`" in
+		7*) ;;
+		*) MPI_ROOT_OPT='--allow-run-as-root';;
+	esac
+fi
+
 ROOT_CONFIG_BIN=${1}/bin
 sed "s;<DESTDIR>;${INSTALLDIR};g" ${ROOT_CONFIG_BIN}/config_py.skel >  ${ROOT_CONFIG_BIN}/config.py
 mv ${ROOT_CONFIG_BIN}/config.py  ${ROOT_CONFIG_BIN}/config_py.skel
 sed "s;<MPIDIR>;${MPIDIR};g" ${ROOT_CONFIG_BIN}/config_py.skel >  ${ROOT_CONFIG_BIN}/config.py
+mv ${ROOT_CONFIG_BIN}/config.py  ${ROOT_CONFIG_BIN}/config_py.skel
+sed "s;<MPI_ROOT_OPT>;${MPI_ROOT_OPT};g" ${ROOT_CONFIG_BIN}/config_py.skel >  ${ROOT_CONFIG_BIN}/config.py
 #
 sed "s;<DESTDIR>;${INSTALLDIR};g" ${ROOT_CONFIG_BIN}/config_shell.skel >  ${ROOT_CONFIG_BIN}/config.sh
 mv ${ROOT_CONFIG_BIN}/config.sh ${ROOT_CONFIG_BIN}/config_shell.skel
 sed "s;<MPIDIR>;${MPIDIR};g" ${ROOT_CONFIG_BIN}/config_shell.skel >  ${ROOT_CONFIG_BIN}/config.sh
+mv ${ROOT_CONFIG_BIN}/config.sh ${ROOT_CONFIG_BIN}/config_shell.skel
+sed "s;<MPI_ROOT_OPT>;${MPI_ROOT_OPT};g" ${ROOT_CONFIG_BIN}/config_shell.skel >  ${ROOT_CONFIG_BIN}/config.sh
 rm -f ${ROOT_CONFIG_BIN}/config_py.skel ${ROOT_CONFIG_BIN}/config_shell.skel

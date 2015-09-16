@@ -37,6 +37,8 @@ KERNELDIR = 'linux*'
 
 MPIRUN = MPIDIR + '/mpirun'
 
+MPIROOTOPT = '<MPI_ROOT_OPT>'
+
 NPROC = 1
 
 NOWAIT = '-nw'
