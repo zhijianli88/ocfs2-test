@@ -43,11 +43,13 @@ else
 fi;
 
 MPI_ROOT_OPT=
-if [ -f /etc/redhat-release ]; then
-	case "`rpm -qf /etc/redhat-release --qf '%{VERSION}' 2>/dev/null`" in
-		7*) ;;
-		*) MPI_ROOT_OPT='--allow-run-as-root';;
-	esac
+MPI_VERSION=`rpm -q --queryformat '%{VERSION}.' openmpi`
+MAJOR=`echo $MPI_VERSION | awk -F '.' '{printf $1}'`
+MINOR=`echo $MPI_VERSION | awk -F '.' '{printf $2}'`
+if [ $MAJOR -gt 1 ]; then
+	MPI_ROOT_OPT='--allow-run-as-root'
+elif [ $MAJOR -eq 1 -a $MINOR -ge 8 ]; then
+	MPI_ROOT_OPT='--allow-run-as-root'
 fi
 
 ROOT_CONFIG_BIN=${1}/bin
