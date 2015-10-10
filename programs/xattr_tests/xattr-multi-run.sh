@@ -301,6 +301,7 @@ f_runtest()
 			rc=$?
 			if [ "$rc" != "0" ];then
 				if [ "$namespace" == "user" -a "$filetype" == "symlink" ]; then
+					echo "This abort is not a bug since extend xattr for symlink on user namespace is not supported." >>${LOG_FILE}
 					continue
 				else
 					rc=1
