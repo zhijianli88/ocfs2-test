@@ -57,6 +57,8 @@ Setup test environment
 
 4. Stop iptables service for all nodes
 
+5. disable selinux
+
 Run the test
 ============
 
