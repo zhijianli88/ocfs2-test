@@ -47,7 +47,6 @@ logfile = config.LOGFILE
 nodelen = 0
 dirlen = 0
 uname = os.uname()
-lhostname = str(socket.gethostname())
 stagedir = ''
 #
 # FUNCTIONS

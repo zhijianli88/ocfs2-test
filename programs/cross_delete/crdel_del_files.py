@@ -36,7 +36,6 @@ import os, stat, sys, time, optparse, socket, string, o2tf, pdb, timing, config
 DEBUGON = os.getenv('DEBUG',0)
 #
 uname = os.uname()
-lhostname = str(socket.gethostname())
 logfile = config.LOGFILE
 #
 # MAIN
@@ -79,7 +78,11 @@ if __name__=='__main__':
 # First thing. Check if the dirlist is actually a directory or a file 
 # containing the directory list.
 #
-fd = open(os.path.join(stagedir, socket.gethostname() + '_D.dat'), 'r', 0)
+from os import access, F_OK
+if os.access(os.path.join(stagedir, socket.gethostname()+'_D.dat'), F_OK) == 1:
+	fd = open(os.path.join(stagedir, socket.gethostname() + '_D.dat'), 'r', 0)
+else:
+	fd = open(os.path.join(stagedir, socket.gethostbyname(socket.gethostname()) + '_D.dat'), 'r', 0)
 dirlist = string.split(fd.read(), ',')
 fd.close()
 dirlen = len(dirlist)
@@ -111,7 +114,8 @@ for i in range(dirlen):
 #
 # Remove the workfile after it is done.
 #
-from os import access, F_OK
 if os.access(os.path.join(stagedir, socket.gethostname()), F_OK) == 1:
 	os.remove(os.path.join(stagedir, socket.gethostname() + '_D.dat'))
+elif os.access(os.path.join(stagedir, socket.gethostbyname(socket.gethostname())), F_OK) == 1:
+	os.remove(os.path.join(stagedir, socket.gethostbyname(socket.gethostname()) + '_D.dat'))
 sys.exit()
