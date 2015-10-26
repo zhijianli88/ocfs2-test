@@ -77,6 +77,8 @@ if __name__=='__main__':
 	(options, args) = parser.parse_args()
 	if len(args) != 0:
 		parser.error('incorrect number of arguments')
+	if options.mountpoint[-1] == '/':
+		options.mountpoint = options.mountpoint[:-1]
 	mounted = o2tf.CheckMounted(options.DEBUGON, logfile, 
 		options.mountpoint)
 	if options.domount:
