@@ -108,5 +108,5 @@ if __name__=='__main__':
 		else:
 			o2tf.printlog('Partition not mounted.',
 				logfile, 0, '')
-			sys.exit(1)
+			sys.exit(0)
 #
