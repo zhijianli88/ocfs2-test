@@ -66,15 +66,8 @@ verify_sizes() {
 }
 
 get_partsz() {
-    dev=`echo ${device} | sed 's/\/dev\///'`
-    num=`cat /proc/partitions | ${AWK} -v DEV=${dev} '
-		BEGIN{dev=DEV} // {split($0, a); if (a[4] == dev) {printf("%u\n", $3); exit 0;} }'`
-    if [ ${num} -eq 0 ]; then
-        echo "error: unable to find size of device"  |tee -a ${LOGFILE}
-        exit 1
-    fi
-
-    partsz=$[${num}*1024]
+    num=`${BLOCKDEV} --getsz ${device}`
+    partsz=$[${num}*512]
     return 0
 }
 
@@ -159,8 +152,7 @@ do_consume() {
 	fillbsz=1048576
 
 	# find the free space
-	freespace=`df --block-size=${fillbsz} ${device} |
-		awk -v DEV=${device} 'BEGIN {dev=DEV;} // { if ($1 == dev) print $4; }'`
+	freespace=`df -k | grep ${device} | awk '{print $4/1024}'`
 
 	if [ $file_type -eq 0 ]
 	then
@@ -247,6 +239,7 @@ MOUNT="`which sudo` -u root `which mount.ocfs2`"
 UMOUNT="`which sudo` -u root `which umount`"
 MKDIR="`which sudo` -u root `which mkdir`"
 RM="`which sudo` -u root `which rm`"
+BLOCKDEV="`which sudo` -u root `which blockdev`"
 GREP=`which grep`
 DATE=`which date`
 AWK=`which awk`
