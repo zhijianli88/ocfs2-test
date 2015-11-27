@@ -129,6 +129,12 @@ do_mount() {
 		echo -n "FAILED. Check dmesg for errors." 2>&1  |tee -a ${LOGFILE}
 		exit 1
 	else
+		# check device name in df for device mapper device.
+		df | grep ${device} 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo -n "FAILED. ${device} not mounted." 2>&1 |tee -a ${LOGFILE}
+			exit 1
+		fi
 		echo "OK"  |tee -a ${LOGFILE}
 	fi
 }
