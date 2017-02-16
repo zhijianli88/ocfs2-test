@@ -222,9 +222,9 @@ f_do_mkfs_and_mount()
 	echo -n "Mkfsing device:"|tee -a ${RUN_LOG_FILE}
 
 	if [ -z "${COMBIN_TEST}" ];then
-		echo y|${MKFS_BIN} --fs-features=xattr -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -N 1 ${OCFS2_DEVICE} ${BLOCKNUMS}>>${RUN_LOG_FILE} 2>&1
+		echo y|${MKFS_BIN} --fs-features=xattr -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -M local ${OCFS2_DEVICE} ${BLOCKNUMS}>>${RUN_LOG_FILE} 2>&1
 	else
-		echo y|${MKFS_BIN} --fs-features=xattr,inline-data -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -N 1 ${OCFS2_DEVICE} ${BLOCKNUMS}>>${RUN_LOG_FILE} 2>&1
+		echo y|${MKFS_BIN} --fs-features=xattr,inline-data -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -M local ${OCFS2_DEVICE} ${BLOCKNUMS}>>${RUN_LOG_FILE} 2>&1
 	fi
         RET=$?
         echo_status ${RET} |tee -a ${RUN_LOG_FILE}
