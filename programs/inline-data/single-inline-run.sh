@@ -171,7 +171,7 @@ f_do_mkfs_and_mount()
 {
 	echo -n "Mkfsing device:"|tee -a ${RUN_LOG_FILE}
 
-	echo y|${MKFS_BIN} --fs-features=inline-data -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -N 4 ${OCFS2_DEVICE} ${BLOCKNUMS} >>${RUN_LOG_FILE} 2>&1
+	echo y|${MKFS_BIN} --fs-features=inline-data -b ${BLOCKSIZE} -C ${CLUSTERSIZE} -M local ${OCFS2_DEVICE} ${BLOCKNUMS} >>${RUN_LOG_FILE} 2>&1
 	RET=$?
 	echo_status ${RET} |tee -a ${RUN_LOG_FILE}
 	exit_or_not ${RET}
