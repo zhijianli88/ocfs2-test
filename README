@@ -7,11 +7,11 @@ Installation
 
 * For OL6 or OL7:
 openmpi libgomp openmpi-devel mpi-selector gcc autoconf libaio-devel e2fsprogs-devel nc reflink
-and ocfs2-tools(>1.6) ocfs2-tools-devel(>1.6)
+libcom_err libcom_err-devel reflink and ocfs2-tools(>1.6) ocfs2-tools-devel(>1.6)
 
 * For OL5:
 openmpi libgomp openmpi-devel openmpi-libs mpi-selector gcc autoconf libaio-devel e2fsprogs-devel
-and ocfs2-2.6.18-348 ocfs2-tools(>1.6) ocfs2-tools-devel(>1.6)
+reflink and ocfs2-2.6.18-348 ocfs2-tools(>1.6) ocfs2-tools-devel(>1.6)
 
 2. Add user "ocfs2test" for all nodes
 
