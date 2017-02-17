@@ -215,7 +215,7 @@ function f_reflink_bash_utils_test()
 		for i in $(seq ${ref_counts});do
 			target=${target_pfx}-${i}
 			skip=$((${RANDOM}%${count}))
-			dd if=/dev/random of=${target} bs=${bs} count=1 \
+			dd if=/dev/zero of=${target} bs=${bs} count=1 \
 			   seek=${skip}
 
 			if [ "$?" -ne "0" ]; then
@@ -370,7 +370,7 @@ copy to release space"
 			removed=$((${removed}+1))
 		fi
 		f_LogMsg ${LOG_FILE} "Random Writes(#${i}) in ${offset} Pos"
-		dd if=/dev/random of=${orig_file} seek=${offset} bs=1024 \
+		dd if=/dev/zero of=${orig_file} seek=${offset} bs=1024 \
 count=$((${RANDOM}/1024)) conv=notrunc>/dev/null 2>&1
 		sync
 
