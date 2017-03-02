@@ -764,6 +764,7 @@ run_reserve_space()
 				space_free=`df|grep ${device}|awk '{print $4}'`
 				space_free=$((${space_free}*1024))
 
+				RC=0
 				for i in `seq ${iter}`;do
 					r_whence=0
 					r_start=$((${RANDOM}%${space_free}))
