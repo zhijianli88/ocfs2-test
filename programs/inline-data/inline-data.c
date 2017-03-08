@@ -253,18 +253,6 @@ static int teardown(void)
 	return 0;
 }
 
-static void sigchld_handler()
-{
-	pid_t pid;
-	union wait status;
-
-	while (1) {
-		pid = wait3(&status, WNOHANG, NULL);
-		if (pid <= 0)
-			break;
-	}
-}
-
 static void kill_all_children()
 {
 	int i;
@@ -315,8 +303,6 @@ static int concurrent_rw_test(void)
 	fd = prep_file(max_inline_size);
 	if (fd < 0)
 		return -1;
-
-	signal(SIGCHLD, sigchld_handler);
 
 	for (i = 0; i < child_nums; i++) {
 		pid = fork();
@@ -369,11 +355,16 @@ static int concurrent_rw_test(void)
 	/*father wait all children to leave*/
 	for (i = 0; i < child_nums; i++) {
 		ret = waitpid(child_pid_list_mp[i], &status, 0);
-		rc = WEXITSTATUS(status);
-		if (rc) {
-			fprintf(stderr, "Child %d exits abnormally with "
-				"RC=%d\n", child_pid_list_mp[i], rc);
-			return rc;
+		if (ret == child_pid_list_mp[i]) {
+			rc = WEXITSTATUS(status);
+			if (rc) {
+				fprintf(stderr, "Child %d exits abnormally with "
+						"RC=%d\n", child_pid_list_mp[i], rc);
+				return rc;
+			}
+		} else {
+			fprintf(stderr, "Wait pid %d failed %d\n", child_pid_list_mp[i], ret);
+			return ret;
 		}
 	}
 
@@ -394,8 +385,6 @@ static int multi_file_rw_test(int test_num)
 
 	fflush(stderr);
 	fflush(stdout);
-
-	signal(SIGCHLD, sigchld_handler);
 
 	for (j = 0; j < file_nums; j++) {
 		pid = fork();
@@ -458,11 +447,16 @@ static int multi_file_rw_test(int test_num)
 	/*father wait all children to leave*/
 	for (i = 0; i < file_nums; i++) {
 		ret = waitpid(child_pid_list_mf[i], &status, 0);
-		rc = WEXITSTATUS(status);
-		if (rc) {
-			fprintf(stderr, "Child %d exists abnormally with "
-				"RC=%d\n", child_pid_list_mf[i], rc);
-			return rc;
+		if (ret == child_pid_list_mf[i]) {
+			rc = WEXITSTATUS(status);
+			if (rc) {
+				fprintf(stderr, "Child %d exists abnormally with "
+						"RC=%d\n", child_pid_list_mf[i], rc);
+				return rc;
+			}
+		} else {
+			fprintf(stderr, "Wait pid %d failed %d\n", child_pid_list_mf[i], ret);
+			return ret;
 		}
 	}
 

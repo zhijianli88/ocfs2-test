@@ -354,18 +354,6 @@ static void run_large_dir_tests(void)
 	testno++;
 }
 
-static void sigchld_handler()
-{
-	pid_t pid;
-	union wait status;
-
-	while (1) {
-		pid = wait3(&status, WNOHANG, NULL);
-		if (pid <= 0)
-			break;
-	}
-}
-
 static void kill_all_children()
 {
 	int i;
@@ -504,8 +492,6 @@ static void run_concurrent_test(void)
 	fflush(stderr);
 	fflush(stdout);
 
-	signal(SIGCHLD, sigchld_handler);
-
 	for (i = 0; i < child_nums; i++) {
 		pid = fork();
 		if (pid < 0) {
@@ -533,11 +519,17 @@ static void run_concurrent_test(void)
 	/*father wait all children to leave*/
 	for (i = 0; i < child_nums; i++) {
 		ret = waitpid(child_pid_list[i], &status, 0);
-		rc = WEXITSTATUS(status);
-		if (rc) {
-			fprintf(stderr, "Child %d exits abnormally with "
-				"RC=%d\n", child_pid_list[i], rc);
-			exit(rc);
+		if (ret == child_pid_list[i]) {
+			rc = WEXITSTATUS(status);
+			if (rc) {
+				fprintf(stderr, "Child %d exits abnormally with "
+						"RC=%d\n", child_pid_list[i], rc);
+				exit(rc);
+			}
+		} else {
+				fprintf(stderr, "Wait pid %d failed %d\n",
+					child_pid_list[i], ret);
+				exit(ret);
 		}
 	}
 	/*father help to verfiy dirents' consistency*/
@@ -573,8 +565,6 @@ static void run_multiple_test(void)
 
 	fflush(stderr);
 	fflush(stdout);
-
-	signal(SIGCHLD, sigchld_handler);
 
 	for (i = 0; i < file_nums; i++) {
 		pid = fork();
@@ -612,11 +602,17 @@ static void run_multiple_test(void)
 	/*father wait all children to leave*/
 	for (i = 0; i < file_nums; i++) {
 		ret = waitpid(child_pid_list[i], &status, 0);
-		rc = WEXITSTATUS(status);
-		if (rc) {
-			fprintf(stderr, "Child %d exits abnormally with "
-				"RC=%d\n", child_pid_list[i], rc);
-			exit(rc);
+		if (ret == child_pid_list[i]) {
+			rc = WEXITSTATUS(status);
+			if (rc) {
+				fprintf(stderr, "Child %d exits abnormally with "
+						"RC=%d\n", child_pid_list[i], rc);
+				exit(rc);
+			}
+		} else {
+				fprintf(stderr, "Wait pid %d failed %d\n",
+					child_pid_list[i], ret);
+				exit(ret);
 		}
 	}
 
