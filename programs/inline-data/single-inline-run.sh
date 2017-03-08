@@ -238,9 +238,9 @@ f_run_data_test()
         echo -ne "Stress Test I For Regular File:">> ${DATA_LOG_FILE}             
         echo >>${DATA_LOG_FILE}
         echo "==========================================================">>${DATA_LOG_FILE}
-	echo -e "Testing Binary:\t\t${INLINE_DATA_BIN} -i 50 -m 20 -d ${OCFS2_DEVICE} ${MOUNT_POINT}">>${DATA_LOG_FILE}
+	echo -e "Testing Binary:\t\t${INLINE_DATA_BIN} -i 5 -m 20 -d ${OCFS2_DEVICE} ${MOUNT_POINT}">>${DATA_LOG_FILE}
 
-        ${INLINE_DATA_BIN} -i 50 -m 20 -d ${OCFS2_DEVICE} ${MOUNT_POINT}>>${DATA_LOG_FILE} 2>&1
+        ${INLINE_DATA_BIN} -i 5 -m 20 -d ${OCFS2_DEVICE} ${MOUNT_POINT}>>${DATA_LOG_FILE} 2>&1
 	RET=$?
         echo_status ${RET} |tee -a ${RUN_LOG_FILE}
         exit_or_not ${RET}
@@ -252,9 +252,9 @@ f_run_data_test()
         echo -ne "Stress Test II For Regular File:">> ${DATA_LOG_FILE}     
         echo >>${DATA_LOG_FILE}
         echo "==========================================================">>${DATA_LOG_FILE}
-	echo -e "Testing Binary:\t\t${INLINE_DATA_BIN} -i 50 -c 500 -d ${OCFS2_DEVICE} ${MOUNT_POINT}">>${DATA_LOG_FILE}
+	echo -e "Testing Binary:\t\t${INLINE_DATA_BIN} -i 5 -c 500 -d ${OCFS2_DEVICE} ${MOUNT_POINT}">>${DATA_LOG_FILE}
 
-        ${INLINE_DATA_BIN} -i 50 -c 500 -d ${OCFS2_DEVICE} ${MOUNT_POINT}>>${DATA_LOG_FILE} 2>&1
+        ${INLINE_DATA_BIN} -i 5 -c 500 -d ${OCFS2_DEVICE} ${MOUNT_POINT}>>${DATA_LOG_FILE} 2>&1
 	RET=$?
         echo_status ${RET} |tee -a ${RUN_LOG_FILE}
         exit_or_not ${RET}
