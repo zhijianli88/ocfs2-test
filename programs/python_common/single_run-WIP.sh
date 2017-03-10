@@ -673,7 +673,7 @@ run_sendfile()
 		do_mount ${device} ${mountpoint} ${mountopts}
 
 		# Generate original date file
-		dd if=/dev/random of=${workfile} bs=${clustersize} count=4
+		dd if=/dev/zero of=${workfile} bs=${clustersize} count=4
                 outlog=${logdir}/sendfile_${mopt}.log
 
 		nc -l ${port} >${verifyfile} &
