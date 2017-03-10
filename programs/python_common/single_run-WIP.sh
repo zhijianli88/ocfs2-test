@@ -656,7 +656,7 @@ run_sendfile()
 	mountpoint=$3
 
 	workfile=${mountpoint}/ocfs2_sendfile_data
-	verifyfile=/tmp/sendfile_verify
+	verifyfile=/${mountpoint}/sendfile_verify
 	
 	blocksize=4096
 	clustersize=32768
